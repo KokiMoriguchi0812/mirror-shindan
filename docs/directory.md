@@ -1,13 +1,14 @@
 # ディレクトリ構成
 
 ```
-mbti-original/
+NEW_MBTI_local/
 ├── README.md                        # プロジェクト概要
 ├── .env.local                       # 環境変数（Git管理外）
 ├── .env.example                     # 環境変数サンプル
 ├── next.config.ts
 ├── tailwind.config.ts
 ├── tsconfig.json
+├── vitest.config.ts
 ├── package.json
 │
 ├── docs/                            # 設計ドキュメント
@@ -16,18 +17,35 @@ mbti-original/
 │   ├── wireframes.md                # 画面設計
 │   ├── api.md                       # API設計
 │   ├── directory.md                 # 本ファイル
+│   ├── supabase_setup.sql           # Supabaseテーブル作成SQL
 │   └── 拡張.md                      # 拡張機能リスト
 │
 ├── public/
-│   ├── og-image.png                 # OGP画像
-│   └── favicon.ico
+│   └── types/                       # 16タイプ画像（PNG）
+│       ├── FYKT(革命家).png
+│       ├── FYKS(指揮者).png
+│       ├── FYHT(外交家).png
+│       ├── FYHS(先駆者).png
+│       ├── FRKT(表現者).png
+│       ├── FRKS(覇者).png
+│       ├── FRHT(守護者).png
+│       ├── FRHS(実行者).png
+│       ├── GYKT(包容者).png
+│       ├── GYKS(啓発者).png
+│       ├── GYHT(調停者).png
+│       ├── GYHS(参謀).png
+│       ├── GRKT(詩人).png
+│       ├── GRKS(探求者).png
+│       ├── GRHT(哲学者).png
+│       └── GRHS(思想家).png
 │
 └── src/
     ├── app/                         # Next.js App Router
-    │   ├── layout.tsx               # 共通レイアウト
+    │   ├── globals.css              # グローバルスタイル
+    │   ├── layout.tsx               # 共通レイアウト・メタデータ
     │   ├── page.tsx                 # トップページ
     │   ├── quiz/
-    │   │   └── page.tsx             # 診断ページ（自己診断）
+    │   │   └── page.tsx             # 診断ページ（32問）
     │   ├── result/
     │   │   └── [token]/
     │   │       └── page.tsx         # 結果ページ（自己像・他者像比較）
@@ -36,25 +54,27 @@ mbti-original/
     │   │       └── page.tsx         # 友人診断ページ
     │   └── api/
     │       ├── sessions/
-    │       │   └── route.ts         # POST: セッション作成
-    │       ├── sessions/[token]/
-    │       │   └── route.ts         # GET: 結果取得 / PUT: 回答保存
-    │       └── friend/[token]/
-    │           └── route.ts         # GET: 友人診断情報 / POST: 友人回答送信
+    │       │   ├── route.ts         # POST: 自己診断セッション作成
+    │       │   └── [token]/
+    │       │       └── route.ts     # GET: 結果取得 / PUT: 回答保存
+    │       └── friend/
+    │           └── [token]/
+    │               └── route.ts     # GET: 友人情報取得 / POST: 友人回答送信
     │
     ├── components/
-    │   ├── ui/                      # shadcn/ui コンポーネント
     │   ├── ScaleInput.tsx           # 5段階スケール入力UI
     │   ├── QuizQuestion.tsx         # 質問1問コンポーネント
-    │   ├── ProgressBar.tsx          # 診断進捗バー
-    │   ├── ResultCard.tsx           # タイプ結果カード
-    │   ├── GapChart.tsx             # 自己像vs他者像チャート
-    │   ├── ShareButtons.tsx         # シェアボタン群
-    │   └── FriendInvite.tsx         # 友人招待UIコンポーネント
+    │   ├── ResultCard.tsx           # タイプ結果カード（画像・スコアバー）
+    │   ├── GapChart.tsx             # 自己像vs他者像ギャップ表示
+    │   └── ShareButtons.tsx         # X/LINE/URLコピーシェアボタン
     │
-    └── lib/
-        ├── supabase.ts              # Supabaseクライアント設定
-        ├── questions.ts             # 32問データ定義
-        ├── scoring.ts               # スコア計算・タイプ判定ロジック
-        └── types.ts                 # TypeScript型定義
+    ├── lib/
+    │   ├── supabase.ts              # Supabaseクライアント設定
+    │   ├── questions.ts             # 32問データ定義（4軸×8問）
+    │   ├── scoring.ts               # スコア計算・タイプ判定・ギャップ生成
+    │   └── types.ts                 # TypeScript型定義
+    │
+    └── test/
+        ├── scoring.test.ts          # スコアリングロジックのユニットテスト（12件）
+        └── setup.ts                 # テストセットアップ
 ```
