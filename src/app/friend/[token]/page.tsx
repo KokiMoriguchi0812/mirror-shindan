@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import ScaleInput from "@/components/ScaleInput";
 import ResultCard from "@/components/ResultCard";
+import GapChart from "@/components/GapChart";
 import { QUESTIONS, AXES } from "@/lib/questions";
-import { calcResult } from "@/lib/scoring";
+import { calcResult, calcFriendGaps } from "@/lib/scoring";
 import { TYPE_DETAILS } from "@/lib/type-details";
 import type { DiagnosisResult } from "@/lib/types";
 
@@ -17,6 +18,39 @@ const AXIS_LABELS: Record<string, { icon: string; desc: string }> = {
   価値基準: { icon: "⚖️", desc: "判断・価値観の基準" },
 };
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function CollapseSection({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-2xl border border-mirror-100 shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex justify-between items-center px-5 py-4 text-left"
+      >
+        <span className="font-semibold text-mirror-800 text-sm">{title}</span>
+        <span className="text-mirror-400 text-lg">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && <div className="px-5 pb-5">{children}</div>}
+    </div>
+  );
+}
+
 type Phase = "intro" | "quiz" | "done" | "notfound";
 
 export default function FriendPage() {
@@ -26,9 +60,18 @@ export default function FriendPage() {
   const [axisIndex, setAxisIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 回答後の結果
   const [friendResult, setFriendResult] = useState<DiagnosisResult | null>(null);
   const [selfResult, setSelfResult] = useState<DiagnosisResult | null>(null);
+
+  // 各軸の問題をシャッフル（マウント時に一度だけ）
+  const shuffledQuestions = useMemo(() => {
+    const result: typeof QUESTIONS = [];
+    for (const axis of AXES) {
+      const axisQs = QUESTIONS.filter((q) => q.axis === axis);
+      result.push(...shuffleArray(axisQs));
+    }
+    return result;
+  }, []);
 
   useEffect(() => {
     fetch(`/api/friend/${token}`)
@@ -44,15 +87,26 @@ export default function FriendPage() {
   }, [token]);
 
   const currentAxis = AXES[axisIndex];
-  const axisQuestions = QUESTIONS.filter((q) => q.axis === currentAxis);
-  const axisAnswers = axisQuestions.map((q) => answers[q.id - 1]);
-  const allAxisAnswered = axisAnswers.every((a) => a !== null);
+  const axisQuestions = shuffledQuestions.filter((q) => q.axis === currentAxis);
   const isLastAxis = axisIndex === AXES.length - 1;
+  const allAnswered = answers.every((a) => a !== null);
 
   const handleAnswer = (questionId: number, value: number) => {
     const next = [...answers];
     next[questionId - 1] = value;
     setAnswers(next);
+  };
+
+  const handleAxisJump = (i: number) => {
+    setAxisIndex(i);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePrev = () => {
+    if (axisIndex > 0) {
+      setAxisIndex((i) => i - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleNext = () => {
@@ -61,8 +115,7 @@ export default function FriendPage() {
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
-    if (answers.some((a) => a === null)) return;
+    if (isSubmitting || !allAnswered) return;
     setIsSubmitting(true);
 
     await fetch(`/api/friend/${token}`, {
@@ -71,7 +124,6 @@ export default function FriendPage() {
       body: JSON.stringify({ answers }),
     });
 
-    // クライアント側でタイプ計算
     const computed = calcResult(answers as number[]);
     setFriendResult(computed);
     setPhase("done");
@@ -93,9 +145,12 @@ export default function FriendPage() {
   }
 
   if (phase === "done" && friendResult) {
+    const friendGaps = calcFriendGaps(selfResult!, friendResult);
+
     return (
       <main className="min-h-screen px-4 py-8">
         <div className="max-w-md mx-auto flex flex-col gap-5">
+
           <div className="text-center">
             <p className="text-4xl">✨</p>
             <h2 className="text-xl font-bold text-mirror-900 mt-2">回答ありがとうございました！</h2>
@@ -103,31 +158,36 @@ export default function FriendPage() {
           </div>
 
           {/* あなたから見た友人 */}
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-mirror-400 tracking-widest uppercase">
-              あなたから見た友人
-            </p>
+          <CollapseSection title="👤 あなたから見た友人">
             <ResultCard result={friendResult} />
-            <div className="bg-mirror-50 rounded-2xl p-4 border border-mirror-100">
+            <div className="bg-mirror-50 rounded-2xl p-4 border border-mirror-100 mt-3">
               <p className="text-mirror-700 text-sm leading-relaxed">
                 {TYPE_DETAILS[friendResult.typeCode]}
               </p>
             </div>
-          </div>
+          </CollapseSection>
 
           {/* 友人から見た友人（本人の自己診断） */}
           {selfResult && (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-mirror-400 tracking-widest uppercase">
-                友人から見た友人（本人の自己診断）
-              </p>
+            <CollapseSection title="🪞 友人から見た友人（本人の自己診断）">
               <ResultCard result={selfResult} />
-              <div className="bg-mirror-50 rounded-2xl p-4 border border-mirror-100">
+              <div className="bg-mirror-50 rounded-2xl p-4 border border-mirror-100 mt-3">
                 <p className="text-mirror-700 text-sm leading-relaxed">
                   {TYPE_DETAILS[selfResult.typeCode]}
                 </p>
               </div>
-            </div>
+            </CollapseSection>
+          )}
+
+          {/* あなたから見た友人 VS 友人から見た友人のギャップ */}
+          {selfResult && (
+            <CollapseSection title="🔍 あなたから見た友人 VS 友人から見た友人のギャップ">
+              <GapChart
+                gaps={friendGaps}
+                title="あなたから見た友人 vs 友人から見た友人"
+                noGapMessage="あなたの評価と友人の自己像がほぼ一致しています ✨"
+              />
+            </CollapseSection>
           )}
 
           <div className="bg-mirror-50 rounded-2xl p-5 border border-mirror-100 text-center">
@@ -139,6 +199,7 @@ export default function FriendPage() {
               自分も診断する
             </Link>
           </div>
+
         </div>
       </main>
     );
@@ -177,6 +238,23 @@ export default function FriendPage() {
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <span className="text-xs text-mirror-400">STEP {axisIndex + 1} / {AXES.length}</span>
+            <span className="flex gap-2 flex-wrap justify-end">
+              {AXES.map((a, i) => (
+                <button
+                  key={a}
+                  onClick={() => handleAxisJump(i)}
+                  className={`text-xs transition-colors ${
+                    i < axisIndex
+                      ? "text-mirror-600 hover:text-mirror-800"
+                      : i === axisIndex
+                      ? "text-mirror-800 font-bold"
+                      : "text-mirror-300 hover:text-mirror-500"
+                  }`}
+                >
+                  {a}
+                </button>
+              ))}
+            </span>
           </div>
           <div className="w-full bg-mirror-100 rounded-full h-1.5">
             <div
@@ -211,21 +289,28 @@ export default function FriendPage() {
           ))}
         </div>
 
-        {/* 次へ / 送信 */}
-        <div className="pb-8">
+        {/* 前へ / 次へ / 送信 */}
+        <div className="pb-8 flex gap-3">
+          {axisIndex > 0 && (
+            <button
+              onClick={handlePrev}
+              className="flex-1 bg-mirror-100 hover:bg-mirror-200 text-mirror-700 font-semibold py-4 rounded-2xl transition-colors"
+            >
+              ← 前へ
+            </button>
+          )}
           {isLastAxis ? (
             <button
               onClick={handleSubmit}
-              disabled={!allAxisAnswered || isSubmitting}
-              className="w-full bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
+              disabled={!allAnswered || isSubmitting}
+              className="flex-1 bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
             >
               {isSubmitting ? "送信中..." : "送信する →"}
             </button>
           ) : (
             <button
               onClick={handleNext}
-              disabled={!allAxisAnswered}
-              className="w-full bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
+              className="flex-1 bg-mirror-600 hover:bg-mirror-700 text-white font-semibold py-4 rounded-2xl transition-colors"
             >
               次へ（{AXES[axisIndex + 1]}へ）→
             </button>

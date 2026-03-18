@@ -2,6 +2,8 @@ import type { GapInfo } from "@/lib/types";
 
 interface GapChartProps {
   gaps: GapInfo[];
+  title?: string;
+  noGapMessage?: string;
 }
 
 const AXIS_EMOJI: Record<string, string> = {
@@ -11,13 +13,17 @@ const AXIS_EMOJI: Record<string, string> = {
   価値基準: "⚖️",
 };
 
-export default function GapChart({ gaps }: GapChartProps) {
+export default function GapChart({
+  gaps,
+  title = "自己像 vs 他者像のギャップ",
+  noGapMessage = "自己像と他者像がほぼ一致しています ✨",
+}: GapChartProps) {
   const hasAnyGap = gaps.some((g) => g.hasGap);
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-mirror-100">
       <h3 className="text-mirror-700 font-semibold mb-4">
-        自己像 vs 他者像のギャップ
+        {title}
       </h3>
 
       <div className="flex flex-col gap-4">
@@ -50,7 +56,7 @@ export default function GapChart({ gaps }: GapChartProps) {
 
       {!hasAnyGap && (
         <p className="text-center text-mirror-400 text-sm mt-2">
-          自己像と他者像がほぼ一致しています ✨
+          {noGapMessage}
         </p>
       )}
     </div>

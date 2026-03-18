@@ -133,7 +133,52 @@ export function calcGaps(
     let message: string | null = null;
     if (hasGap) {
       const msgs = GAP_MESSAGES[axis];
-      // selfCode が左極（F/Y/K/T）かどうかで判定
+      const isLeftPoles = ["F", "Y", "K", "T"];
+      message = isLeftPoles.includes(selfCode) ? msgs.selfLeft : msgs.selfRight;
+    }
+
+    return { axis, selfCode, friendCode, hasGap, message };
+  });
+}
+
+// 友人視点のギャップ解説文（「あなた」→「友人」、「周囲」→「あなた」に置換）
+const FRIEND_GAP_MESSAGES: Record<AxisName, { selfLeft: string; selfRight: string }> = {
+  行動様式: {
+    selfLeft:  "友人は自分を行動的だと感じているようですが、あなたの目には慎重に見えているようです。内側の情熱が外に伝わりにくいのかもしれません。",
+    selfRight: "友人は自分を慎重だと思っているようですが、あなたの目にはテキパキ動く人に映っているようです。",
+  },
+  対人距離: {
+    selfLeft:  "友人は自分を社交的だと思っているようですが、あなたの目にはどこか距離感がある印象を受けるかもしれません。",
+    selfRight: "友人は自分を内向きだと感じているようですが、あなたの目にはオープンで親しみやすい人に見えているようです。",
+  },
+  感情表現: {
+    selfLeft:  "友人は感情を表に出していると思っているようですが、あなたの目にはクールに見えているようです。気持ちを言葉にするともっと伝わるかもしれません。",
+    selfRight: "友人は感情を抑えているつもりのようですが、あなたの目にはよく感情が出ている人に見えているようです。",
+  },
+  価値基準: {
+    selfLeft:  "友人は感情・共感を大切にしていると思っているようですが、あなたの目には論理的・冷静な人に見えているようです。",
+    selfRight: "友人は論理や安定を重視していると思っているようですが、あなたの目には感情豊かで共感力がある人に映っているようです。",
+  },
+};
+
+/**
+ * 友人視点のギャップを生成する（友人の結果ページ用）
+ * self = 被診断者の自己診断 / friend = 回答した友人が見た結果
+ */
+export function calcFriendGaps(
+  self: DiagnosisResult,
+  friend: DiagnosisResult | null
+) {
+  if (!friend) return [];
+
+  return AXES.map((axis) => {
+    const selfCode   = self.scores[axis].code;
+    const friendCode = friend.scores[axis].code;
+    const hasGap     = selfCode !== friendCode;
+
+    let message: string | null = null;
+    if (hasGap) {
+      const msgs = FRIEND_GAP_MESSAGES[axis];
       const isLeftPoles = ["F", "Y", "K", "T"];
       message = isLeftPoles.includes(selfCode) ? msgs.selfLeft : msgs.selfRight;
     }

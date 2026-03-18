@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import ScaleInput from "@/components/ScaleInput";
 import { QUESTIONS, AXES } from "@/lib/questions";
@@ -14,23 +14,42 @@ const AXIS_LABELS: Record<string, { icon: string; desc: string }> = {
   価値基準: { icon: "⚖️", desc: "判断・価値観の基準" },
 };
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export default function QuizPage() {
   const router = useRouter();
   const { session } = useAuth();
 
+  // 各軸の問題をシャッフル（マウント時に一度だけ）
+  const shuffledQuestions = useMemo(() => {
+    const result: typeof QUESTIONS = [];
+    for (const axis of AXES) {
+      const axisQs = QUESTIONS.filter((q) => q.axis === axis);
+      result.push(...shuffleArray(axisQs));
+    }
+    return result;
+  }, []);
+
   const [answers, setAnswers] = useState<(number | null)[]>(
     Array(QUESTIONS.length).fill(null)
   );
-  const [axisIndex, setAxisIndex] = useState(0); // 0=行動様式 ... 3=価値基準
+  const [axisIndex, setAxisIndex] = useState(0);
   const [resultToken, setResultToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentAxis = AXES[axisIndex];
-  const axisQuestions = QUESTIONS.filter((q) => q.axis === currentAxis);
-  const axisAnswers = axisQuestions.map((q) => answers[q.id - 1]);
-  const allAxisAnswered = axisAnswers.every((a) => a !== null);
+  const axisQuestions = shuffledQuestions.filter((q) => q.axis === currentAxis);
   const isLastAxis = axisIndex === AXES.length - 1;
+  const allAnswered = answers.every((a) => a !== null);
 
+  // セッション作成（初回レンダリング後に実行）
   useEffect(() => {
     fetch("/api/sessions", { method: "POST" })
       .then((r) => r.json())
@@ -46,6 +65,18 @@ export default function QuizPage() {
     setAnswers(newAnswers);
   };
 
+  const handleAxisJump = (i: number) => {
+    setAxisIndex(i);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePrev = () => {
+    if (axisIndex > 0) {
+      setAxisIndex((i) => i - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const handleNext = () => {
     if (axisIndex < AXES.length - 1) {
       setAxisIndex((i) => i + 1);
@@ -54,9 +85,7 @@ export default function QuizPage() {
   };
 
   const handleSubmit = async () => {
-    if (!resultToken || isSubmitting) return;
-    if (answers.some((a) => a === null)) return;
-
+    if (!resultToken || isSubmitting || !allAnswered) return;
     setIsSubmitting(true);
 
     const accessToken = session?.access_token;
@@ -82,20 +111,21 @@ export default function QuizPage() {
             <span className="text-xs text-mirror-400">
               STEP {axisIndex + 1} / {AXES.length}
             </span>
-            <span className="text-xs text-mirror-400">
+            <span className="flex gap-2 flex-wrap justify-end">
               {AXES.map((a, i) => (
-                <span
+                <button
                   key={a}
-                  className={`inline-block mx-0.5 ${
+                  onClick={() => handleAxisJump(i)}
+                  className={`text-xs transition-colors ${
                     i < axisIndex
-                      ? "text-mirror-600"
+                      ? "text-mirror-600 hover:text-mirror-800"
                       : i === axisIndex
                       ? "text-mirror-800 font-bold"
-                      : "text-mirror-200"
+                      : "text-mirror-300 hover:text-mirror-500"
                   }`}
                 >
                   {a}
-                </span>
+                </button>
               ))}
             </span>
           </div>
@@ -139,21 +169,28 @@ export default function QuizPage() {
           })}
         </div>
 
-        {/* 次へ / 送信ボタン */}
-        <div className="pb-8">
+        {/* 前へ / 次へ / 送信ボタン */}
+        <div className="pb-8 flex gap-3">
+          {axisIndex > 0 && (
+            <button
+              onClick={handlePrev}
+              className="flex-1 bg-mirror-100 hover:bg-mirror-200 text-mirror-700 font-semibold py-4 rounded-2xl transition-colors"
+            >
+              ← 前へ
+            </button>
+          )}
           {isLastAxis ? (
             <button
               onClick={handleSubmit}
-              disabled={!allAxisAnswered || isSubmitting}
-              className="w-full bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
+              disabled={!allAnswered || isSubmitting}
+              className="flex-1 bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
             >
               {isSubmitting ? "送信中..." : "診断結果を見る →"}
             </button>
           ) : (
             <button
               onClick={handleNext}
-              disabled={!allAxisAnswered}
-              className="w-full bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
+              className="flex-1 bg-mirror-600 hover:bg-mirror-700 text-white font-semibold py-4 rounded-2xl transition-colors"
             >
               次へ（{AXES[axisIndex + 1]}へ）→
             </button>

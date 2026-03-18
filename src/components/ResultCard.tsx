@@ -67,10 +67,10 @@ export default function ResultCard({ result, label }: ResultCardProps) {
                   <span className="text-mirror-300">{axis}</span>
                   <span>{labels.rightFeature}</span>
                 </div>
-                {/* ゲージ（コードを真横に表示） */}
+                {/* ゲージ（漢字+コードを真横に表示） */}
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold w-4 shrink-0 ${isLeft ? "text-mirror-700" : "text-mirror-300"}`}>
-                    {labels.leftCode}
+                  <span className={`text-xs font-bold w-12 shrink-0 ${isLeft ? "text-mirror-700" : "text-mirror-300"}`}>
+                    {labels.left}({labels.leftCode})
                   </span>
                   <div className="flex-1 bg-mirror-100 rounded-full h-2">
                     <div
@@ -78,8 +78,8 @@ export default function ResultCard({ result, label }: ResultCardProps) {
                       style={{ width: `${Math.max(barWidth, 10)}%` }}
                     />
                   </div>
-                  <span className={`text-xs font-bold w-4 shrink-0 text-right ${!isLeft ? "text-mirror-700" : "text-mirror-300"}`}>
-                    {labels.rightCode}
+                  <span className={`text-xs font-bold w-12 shrink-0 text-right ${!isLeft ? "text-mirror-700" : "text-mirror-300"}`}>
+                    {labels.right}({labels.rightCode})
                   </span>
                 </div>
               </div>
