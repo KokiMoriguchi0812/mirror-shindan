@@ -2,6 +2,9 @@
 
 > 「自分が思う自分」と「他人が見る自分」のギャップを可視化する、日本人向け対人関係特化型性格診断
 
+**本番URL：** https://mirror-shindan.vercel.app
+**GitHub：** https://github.com/KokiMoriguchi0812/mirror-shindan
+
 ## 概要
 
 MBTIにヒントを得た日本人向けオリジナル性格診断。
