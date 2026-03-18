@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { calcResult } from "@/lib/scoring";
 
 // GET /api/friend/[token] - 友人診断ページ用情報取得
 export async function GET(
@@ -11,12 +12,12 @@ export async function GET(
 
   const { data: session, error } = await supabase
     .from("sessions")
-    .select("id")
+    .select("id, self_answers")
     .eq("friend_token", token)
     .single();
 
   if (error || !session) {
-    return NextResponse.json({ error: "TOKEN_NOT_FOUND" }, { status: 404 });
+    return NextResponse.json({ session_exists: false }, { status: 404 });
   }
 
   const { count } = await supabase
@@ -24,7 +25,16 @@ export async function GET(
     .select("*", { count: "exact", head: true })
     .eq("session_id", session.id);
 
-  return NextResponse.json({ session_exists: true, friend_count: count ?? 0 });
+  const selfResult =
+    session.self_answers && session.self_answers.length === 32
+      ? calcResult(session.self_answers)
+      : null;
+
+  return NextResponse.json({
+    session_exists: true,
+    friend_count: count ?? 0,
+    self_result: selfResult,
+  });
 }
 
 // POST /api/friend/[token] - 友人回答を送信

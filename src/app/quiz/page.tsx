@@ -2,45 +2,55 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import QuizQuestion from "@/components/QuizQuestion";
-import { QUESTIONS } from "@/lib/questions";
+import ScaleInput from "@/components/ScaleInput";
+import { QUESTIONS, AXES } from "@/lib/questions";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
+
+const AXIS_LABELS: Record<string, { icon: string; desc: string }> = {
+  行動様式: { icon: "⚡", desc: "行動のスピード・決断スタイル" },
+  対人距離: { icon: "🌿", desc: "人との関わり方・社交性" },
+  感情表現: { icon: "🔥", desc: "感情の出し方・表現スタイル" },
+  価値基準: { icon: "⚖️", desc: "判断・価値観の基準" },
+};
 
 export default function QuizPage() {
   const router = useRouter();
+  const { session } = useAuth();
+
   const [answers, setAnswers] = useState<(number | null)[]>(
     Array(QUESTIONS.length).fill(null)
   );
-  const [current, setCurrent] = useState(0);
+  const [axisIndex, setAxisIndex] = useState(0); // 0=行動様式 ... 3=価値基準
   const [resultToken, setResultToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // セッション作成
+  const currentAxis = AXES[axisIndex];
+  const axisQuestions = QUESTIONS.filter((q) => q.axis === currentAxis);
+  const axisAnswers = axisQuestions.map((q) => answers[q.id - 1]);
+  const allAxisAnswered = axisAnswers.every((a) => a !== null);
+  const isLastAxis = axisIndex === AXES.length - 1;
+
   useEffect(() => {
-    const init = async () => {
-      const res = await fetch("/api/sessions", { method: "POST" });
-      const data = await res.json();
-      setResultToken(data.result_token);
-      // 友人トークンをlocalStorageに保存（結果ページで使用）
-      localStorage.setItem("friend_token", data.friend_token);
-    };
-    init();
+    fetch("/api/sessions", { method: "POST" })
+      .then((r) => r.json())
+      .then((data) => {
+        setResultToken(data.result_token);
+        localStorage.setItem("friend_token", data.friend_token ?? "");
+      });
   }, []);
 
-  const handleAnswer = (value: number) => {
+  const handleAnswer = (questionId: number, value: number) => {
     const newAnswers = [...answers];
-    newAnswers[current] = value;
+    newAnswers[questionId - 1] = value;
     setAnswers(newAnswers);
-
-    // 少し遅延して次の問題へ
-    setTimeout(() => {
-      if (current < QUESTIONS.length - 1) {
-        setCurrent(current + 1);
-      }
-    }, 300);
   };
 
-  const handlePrev = () => {
-    if (current > 0) setCurrent(current - 1);
+  const handleNext = () => {
+    if (axisIndex < AXES.length - 1) {
+      setAxisIndex((i) => i + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleSubmit = async () => {
@@ -48,55 +58,104 @@ export default function QuizPage() {
     if (answers.some((a) => a === null)) return;
 
     setIsSubmitting(true);
+
+    const accessToken = session?.access_token;
     await fetch(`/api/sessions/${resultToken}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
       body: JSON.stringify({ answers }),
     });
+
     router.push(`/result/${resultToken}`);
   };
 
-  const isLast = current === QUESTIONS.length - 1;
-  const allAnswered = answers.every((a) => a !== null);
-  const q = QUESTIONS[current];
-
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full flex flex-col gap-8">
+    <main className="min-h-screen px-4 py-8">
+      <div className="max-w-md mx-auto flex flex-col gap-6">
 
-        <QuizQuestion
-          questionNumber={current + 1}
-          total={QUESTIONS.length}
-          text={q.text}
-          value={answers[current]}
-          onChange={handleAnswer}
-        />
+        {/* プログレス */}
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-mirror-400">
+              STEP {axisIndex + 1} / {AXES.length}
+            </span>
+            <span className="text-xs text-mirror-400">
+              {AXES.map((a, i) => (
+                <span
+                  key={a}
+                  className={`inline-block mx-0.5 ${
+                    i < axisIndex
+                      ? "text-mirror-600"
+                      : i === axisIndex
+                      ? "text-mirror-800 font-bold"
+                      : "text-mirror-200"
+                  }`}
+                >
+                  {a}
+                </span>
+              ))}
+            </span>
+          </div>
+          <div className="w-full bg-mirror-100 rounded-full h-1.5">
+            <div
+              className="bg-mirror-500 h-1.5 rounded-full transition-all duration-500"
+              style={{ width: `${((axisIndex + 1) / AXES.length) * 100}%` }}
+            />
+          </div>
+        </div>
 
-        {/* ナビゲーションボタン */}
-        <div className="flex gap-3">
-          <button
-            onClick={handlePrev}
-            disabled={current === 0}
-            className="flex-1 bg-mirror-50 hover:bg-mirror-100 disabled:opacity-30 text-mirror-600 font-medium py-3 rounded-2xl transition-colors"
-          >
-            ← 前へ
-          </button>
+        {/* 軸タイトル */}
+        <div className="bg-mirror-50 rounded-2xl p-4 border border-mirror-100">
+          <p className="text-2xl font-bold text-mirror-800 flex items-center gap-2">
+            {AXIS_LABELS[currentAxis].icon} {currentAxis}
+          </p>
+          <p className="text-mirror-500 text-sm mt-1">
+            {AXIS_LABELS[currentAxis].desc}
+          </p>
+        </div>
 
-          {isLast ? (
+        {/* 8問リスト */}
+        <div className="flex flex-col gap-5">
+          {axisQuestions.map((q, i) => {
+            const currentAnswer = answers[q.id - 1];
+            return (
+              <div
+                key={q.id}
+                className="bg-white rounded-2xl p-5 border border-mirror-100 shadow-sm flex flex-col gap-4"
+              >
+                <p className="text-xs text-mirror-400 font-medium">Q{i + 1}</p>
+                <p className="text-mirror-800 text-sm leading-relaxed font-medium">
+                  {q.text}
+                </p>
+                <ScaleInput
+                  value={currentAnswer}
+                  onChange={(v) => handleAnswer(q.id, v)}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 次へ / 送信ボタン */}
+        <div className="pb-8">
+          {isLastAxis ? (
             <button
               onClick={handleSubmit}
-              disabled={!allAnswered || isSubmitting}
-              className="flex-1 bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-3 rounded-2xl transition-colors"
+              disabled={!allAxisAnswered || isSubmitting}
+              className="w-full bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
             >
-              {isSubmitting ? "送信中..." : "結果を見る →"}
+              {isSubmitting ? "送信中..." : "診断結果を見る →"}
             </button>
           ) : (
             <button
-              onClick={() => setCurrent(current + 1)}
-              disabled={answers[current] === null}
-              className="flex-1 bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-3 rounded-2xl transition-colors"
+              onClick={handleNext}
+              disabled={!allAxisAnswered}
+              className="w-full bg-mirror-600 hover:bg-mirror-700 disabled:opacity-40 text-white font-semibold py-4 rounded-2xl transition-colors"
             >
-              次へ →
+              次へ（{AXES[axisIndex + 1]}へ）→
             </button>
           )}
         </div>

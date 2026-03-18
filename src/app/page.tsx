@@ -1,8 +1,9 @@
 import Link from "next/link";
+import TypeSlider from "@/components/TypeSlider";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+    <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="max-w-md w-full flex flex-col items-center gap-10">
 
         {/* ロゴ・タイトル */}
@@ -14,8 +15,8 @@ export default function HomePage() {
             ミラー診断
           </h1>
           <p className="text-mirror-600 text-lg leading-relaxed mt-2">
-            「自分が思う自分」と<br />
-            「他人が見る自分」の<br />
+            「自分から見た自分」と<br />
+            「他人から見る自分」の<br />
             ギャップを知ろう。
           </p>
         </div>
@@ -28,31 +29,13 @@ export default function HomePage() {
           診断を始める（無料）
         </Link>
 
-        {/* 特徴 */}
-        <div className="w-full bg-white rounded-2xl p-6 border border-mirror-100 shadow-sm flex flex-col gap-3">
-          <p className="text-mirror-500 text-xs font-semibold tracking-widest uppercase">
-            特徴
-          </p>
-          {[
-            ["📝", "32問・約5分で完了"],
-            ["👥", "友人に送って自分を診断してもらえる"],
-            ["🔍", "16タイプ×自己像と他者像のギャップを表示"],
-            ["💬", "恋愛・職場・友人関係に活かせる"],
-          ].map(([icon, text]) => (
-            <div key={text} className="flex items-center gap-3 text-mirror-700">
-              <span className="text-lg">{icon}</span>
-              <span className="text-sm">{text}</span>
-            </div>
-          ))}
-        </div>
-
         {/* 使い方 */}
-        <div className="w-full flex flex-col gap-3">
+        <div className="w-full flex flex-col gap-4">
           <p className="text-mirror-500 text-xs font-semibold tracking-widest uppercase">
             使い方
           </p>
           {[
-            ["①", "自分で32問に答える"],
+            ["①", "自分で簡単な32問に答える"],
             ["②", "友人に専用URLを送る"],
             ["③", "自己像と他者像のギャップを確認する"],
           ].map(([step, text]) => (
@@ -63,6 +46,14 @@ export default function HomePage() {
               <span className="text-mirror-700 text-sm">{text}</span>
             </div>
           ))}
+        </div>
+
+        {/* 16タイプスライダー */}
+        <div className="w-full flex flex-col gap-4">
+          <p className="text-mirror-500 text-xs font-semibold tracking-widest uppercase">
+            16タイプ
+          </p>
+          <TypeSlider />
         </div>
 
       </div>

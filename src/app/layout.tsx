@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
+import Header from "@/components/Header";
 
 const noto = Noto_Sans_JP({
   subsets: ["latin"],
@@ -27,7 +29,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className={noto.variable}>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <AuthProvider>
+          <Header />
+          <div className="pt-14">{children}</div>
+        </AuthProvider>
+      </body>
     </html>
   );
 }
