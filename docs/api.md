@@ -12,9 +12,10 @@
 | メソッド | パス | 説明 |
 |---------|------|------|
 | POST | `/api/sessions` | 自己診断セッション作成 |
-| PUT | `/api/sessions/[token]` | 自己回答を保存 |
+| PUT | `/api/sessions/[token]` | 自己回答を保存（user_id関連付け対応） |
 | GET | `/api/sessions/[token]` | 結果・ギャップデータ取得 |
-| GET | `/api/friend/[token]` | 友人診断ページ用情報取得 |
+| POST | `/api/sessions/[token]/save` | ログイン後にセッションをアカウントへ保存 |
+| GET | `/api/friend/[token]` | 友人診断ページ用情報・本人自己診断結果取得 |
 | POST | `/api/friend/[token]` | 友人回答を送信 |
 
 ---
@@ -23,8 +24,6 @@
 
 ### POST `/api/sessions`
 新しい診断セッションを作成し、トークンを発行する。
-
-**Request：** なし
 
 **Response：**
 ```json
@@ -37,12 +36,17 @@
 ---
 
 ### PUT `/api/sessions/[token]`
-自己診断の回答を保存する。
+自己診断の回答を保存する。ログイン済みの場合はuser_idも関連付ける。
+
+**Headers（任意）：**
+```
+Authorization: Bearer <supabase_access_token>
+```
 
 **Request Body：**
 ```json
 {
-  "answers": [3, 5, 2, 4, 1, 5, 3, 4, 2, 5, 1, 3, 4, 2, 5, 3, 4, 1, 5, 2, 3, 4, 5, 1, 2, 4, 3, 5, 1, 4, 2, 3]
+  "answers": [3, 5, 2, 4, ...]
 }
 ```
 
@@ -62,55 +66,48 @@
 **Response：**
 ```json
 {
-  "self_type": "FRKS",
-  "self_scores": {
-    "行動様式": { "score": 32, "type": "F" },
-    "対人距離": { "score": 28, "type": "Y" },
-    "感情表現": { "score": 20, "type": "K" },
-    "価値基準": { "score": 15, "type": "S" }
-  },
-  "friend_type": "GRKS",
-  "friend_scores": {
-    "行動様式": { "score": 18, "type": "G" },
-    "対人距離": { "score": 29, "type": "Y" },
-    "感情表現": { "score": 19, "type": "H" },
-    "価値基準": { "score": 14, "type": "S" }
-  },
-  "friend_count": 3,
-  "friend_token": "def456uvw...",
-  "gaps": [
-    {
-      "axis": "行動様式",
-      "self": "F",
-      "friend": "G",
-      "gap_score": 14,
-      "message": "あなたは自分を行動的だと思っていますが、周囲には慎重に見えているようです。"
-    },
-    {
-      "axis": "感情表現",
-      "self": "K",
-      "friend": "H",
-      "gap_score": 1,
-      "message": null
-    }
-  ]
+  "selfResult": { "typeCode": "FRKS", "typeName": "覇者", "kanjiCode": "風林火山", "scores": {...} },
+  "friendResult": { ... } | null,
+  "friendCount": 3,
+  "gaps": [...],
+  "friendToken": "def456uvw...",
+  "hasUserId": true
 }
 ```
 
 ---
 
+### POST `/api/sessions/[token]/save`
+ログイン後に、既存のセッションをアカウントに関連付ける。
+
+**Headers（必須）：**
+```
+Authorization: Bearer <supabase_access_token>
+```
+
+**Response：**
+```json
+{ "success": true }
+```
+
+---
+
 ### GET `/api/friend/[token]`
-友人診断ページの表示に必要な情報を取得する。
+友人診断ページの表示に必要な情報と、本人の自己診断結果を取得する。
 
 **Response：**
 ```json
 {
   "session_exists": true,
-  "friend_count": 3
+  "friend_count": 3,
+  "self_result": {
+    "typeCode": "FRKS",
+    "typeName": "覇者",
+    "kanjiCode": "風林火山",
+    "scores": {...}
+  }
 }
 ```
-
-※ セキュリティのため対象者の名前・結果は返さない
 
 ---
 
@@ -120,15 +117,13 @@
 **Request Body：**
 ```json
 {
-  "answers": [2, 4, 1, 5, 2, 4, 1, 5, 3, 3, 4, 5, 2, 3, 4, 1, 3, 5, 2, 4, 1, 3, 5, 2, 4, 3, 5, 1, 3, 4, 2, 5]
+  "answers": [2, 4, 1, 5, ...]
 }
 ```
 
 **Response：**
 ```json
-{
-  "success": true
-}
+{ "success": true }
 ```
 
 ---
@@ -147,3 +142,4 @@
 | `TOKEN_NOT_FOUND` | 指定トークンが存在しない |
 | `INVALID_ANSWERS` | 回答データの形式が不正 |
 | `SESSION_NOT_COMPLETED` | 自己診断未完了のセッションへのアクセス |
+| `Unauthorized` | 認証トークンが無効または未提供 |

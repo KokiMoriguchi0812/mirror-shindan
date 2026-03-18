@@ -23,58 +23,57 @@ NEW_MBTI_local/
 ├── public/
 │   └── types/                       # 16タイプ画像（PNG）
 │       ├── FYKT(革命家).png
-│       ├── FYKS(指揮者).png
-│       ├── FYHT(外交家).png
-│       ├── FYHS(先駆者).png
-│       ├── FRKT(表現者).png
-│       ├── FRKS(覇者).png
-│       ├── FRHT(守護者).png
-│       ├── FRHS(実行者).png
-│       ├── GYKT(包容者).png
-│       ├── GYKS(啓発者).png
-│       ├── GYHT(調停者).png
-│       ├── GYHS(参謀).png
-│       ├── GRKT(詩人).png
-│       ├── GRKS(探求者).png
-│       ├── GRHT(哲学者).png
-│       └── GRHS(思想家).png
+│       ├── FYKS(指揮者).png  ... （計16枚）
 │
 └── src/
     ├── app/                         # Next.js App Router
     │   ├── globals.css              # グローバルスタイル
-    │   ├── layout.tsx               # 共通レイアウト・メタデータ
-    │   ├── page.tsx                 # トップページ
+    │   ├── layout.tsx               # 共通レイアウト（AuthProvider・Header含む）
+    │   ├── page.tsx                 # トップページ（使い方・16タイプスライダー）
+    │   ├── login/
+    │   │   └── page.tsx             # ログインページ（メール・パスワード）
+    │   ├── register/
+    │   │   └── page.tsx             # アカウント登録ページ
+    │   ├── mypage/
+    │   │   └── page.tsx             # マイページ（過去の診断履歴一覧）
     │   ├── quiz/
-    │   │   └── page.tsx             # 診断ページ（32問）
+    │   │   └── page.tsx             # 診断ページ（8問×4軸セット表示）
     │   ├── result/
     │   │   └── [token]/
-    │   │       └── page.tsx         # 結果ページ（自己像・他者像比較）
+    │   │       ├── page.tsx         # 結果ページ（サーバーコンポーネント・Supabase直接クエリ）
+    │   │       └── ResultPageClient.tsx # 結果ページUI（タブ・保存・再診断・履歴）
     │   ├── friend/
     │   │   └── [token]/
-    │   │       └── page.tsx         # 友人診断ページ
+    │   │       └── page.tsx         # 友人診断ページ（回答後に2タイプ結果表示）
     │   └── api/
     │       ├── sessions/
-    │       │   ├── route.ts         # POST: 自己診断セッション作成
+    │       │   ├── route.ts         # POST: セッション作成
     │       │   └── [token]/
-    │       │       └── route.ts     # GET: 結果取得 / PUT: 回答保存
+    │       │       ├── route.ts     # GET: 結果取得 / PUT: 回答保存（user_id関連付け）
+    │       │       └── save/
+    │       │           └── route.ts # POST: ログイン後に結果をアカウントに保存
     │       └── friend/
     │           └── [token]/
-    │               └── route.ts     # GET: 友人情報取得 / POST: 友人回答送信
+    │               └── route.ts     # GET: 友人情報・本人自己診断結果取得 / POST: 友人回答送信
     │
     ├── components/
+    │   ├── Header.tsx               # ヘッダー（ログイン・登録・マイページ・ログアウト）
+    │   ├── TypeSlider.tsx           # 16タイプスライダー（左右矢印・インジケーター）
     │   ├── ScaleInput.tsx           # 5段階スケール入力UI
-    │   ├── QuizQuestion.tsx         # 質問1問コンポーネント
-    │   ├── ResultCard.tsx           # タイプ結果カード（画像・スコアバー）
+    │   ├── QuizQuestion.tsx         # 質問1問コンポーネント（旧式・友人ページ以外未使用）
+    │   ├── ResultCard.tsx           # タイプ結果カード（ゲージ改善・特徴テキスト表示）
     │   ├── GapChart.tsx             # 自己像vs他者像ギャップ表示
     │   └── ShareButtons.tsx         # X/LINE/URLコピーシェアボタン
     │
     ├── lib/
-    │   ├── supabase.ts              # Supabaseクライアント設定
+    │   ├── auth-context.tsx         # 認証コンテキスト（useAuth hook）
+    │   ├── supabase.ts              # Supabaseクライアント（anon・service）
     │   ├── questions.ts             # 32問データ定義（4軸×8問）
     │   ├── scoring.ts               # スコア計算・タイプ判定・ギャップ生成
+    │   ├── type-details.ts          # 16タイプの詳細説明文
     │   └── types.ts                 # TypeScript型定義
     │
     └── test/
-        ├── scoring.test.ts          # スコアリングロジックのユニットテスト（12件）
+        ├── scoring.test.ts          # スコアリングロジックのユニットテスト
         └── setup.ts                 # テストセットアップ
 ```
