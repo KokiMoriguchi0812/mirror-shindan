@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import ResultCard from "@/components/ResultCard";
 import GapChart from "@/components/GapChart";
 import ShareButtons from "@/components/ShareButtons";
+import { createServiceClient } from "@/lib/supabase";
+import { calcResult, calcFriendResult, calcGaps } from "@/lib/scoring";
 import type { SessionResult } from "@/lib/types";
 
 interface Props {
@@ -9,14 +11,35 @@ interface Props {
 }
 
 async function getResult(token: string): Promise<SessionResult | null> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-  const res = await fetch(`${baseUrl}/api/sessions/${token}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  return res.json();
+  const supabase = createServiceClient();
+
+  const { data: session, error } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("result_token", token)
+    .single();
+
+  if (error || !session) return null;
+  if (!session.self_answers || session.self_answers.length !== 32) return null;
+
+  const { data: friendRows } = await supabase
+    .from("friend_answers")
+    .select("answers")
+    .eq("session_id", session.id);
+
+  const friendAnswers = (friendRows ?? []).map((r: { answers: number[] }) => r.answers);
+
+  const selfResult   = calcResult(session.self_answers);
+  const friendResult = calcFriendResult(friendAnswers);
+  const gaps         = calcGaps(selfResult, friendResult);
+
+  return {
+    selfResult,
+    friendResult,
+    friendCount: friendAnswers.length,
+    gaps,
+    friendToken: session.friend_token,
+  };
 }
 
 export default async function ResultPage({ params }: Props) {
