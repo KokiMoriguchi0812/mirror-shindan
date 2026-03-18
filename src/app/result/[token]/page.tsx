@@ -9,7 +9,9 @@ interface Props {
 }
 
 async function getResult(token: string): Promise<SessionResult | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   const res = await fetch(`${baseUrl}/api/sessions/${token}`, {
     cache: "no-store",
   });
@@ -23,7 +25,9 @@ export default async function ResultPage({ params }: Props) {
 
   if (!data) notFound();
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   const resultUrl = `${baseUrl}/result/${token}`;
   const friendUrl = `${baseUrl}/friend/${data.friendToken}`;
 
