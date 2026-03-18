@@ -97,21 +97,23 @@ export default function FriendPage() {
     setAnswers(next);
   };
 
+  const scrollTop = () => setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
+
   const handleAxisJump = (i: number) => {
     setAxisIndex(i);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTop();
   };
 
   const handlePrev = () => {
     if (axisIndex > 0) {
       setAxisIndex((i) => i - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollTop();
     }
   };
 
   const handleNext = () => {
     setAxisIndex((i) => i + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTop();
   };
 
   const handleSubmit = async () => {
@@ -127,6 +129,7 @@ export default function FriendPage() {
     const computed = calcResult(answers as number[]);
     setFriendResult(computed);
     setPhase("done");
+    scrollTop();
   };
 
   // ── 画面分岐 ──

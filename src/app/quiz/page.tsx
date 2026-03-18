@@ -65,22 +65,24 @@ export default function QuizPage() {
     setAnswers(newAnswers);
   };
 
+  const scrollTop = () => setTimeout(() => window.scrollTo({ top: 0, behavior: "instant" }), 0);
+
   const handleAxisJump = (i: number) => {
     setAxisIndex(i);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTop();
   };
 
   const handlePrev = () => {
     if (axisIndex > 0) {
       setAxisIndex((i) => i - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollTop();
     }
   };
 
   const handleNext = () => {
     if (axisIndex < AXES.length - 1) {
       setAxisIndex((i) => i + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollTop();
     }
   };
 
